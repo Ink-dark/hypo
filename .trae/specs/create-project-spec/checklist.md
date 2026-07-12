@@ -1,0 +1,25 @@
+# Checklist
+
+- [x] docs/SPEC.md 文件存在且内容完整（7 个章节全部覆盖）
+- [x] "项目定位"章节明确说明 hypo 为通用软件安装/卸载/更新管理器，支持任意语言软件分发
+- [x] "与现有工具对比表"覆盖 winget/Scoop/Chocolatey/cargo-install，包含去中心化/签名/跨平台/语言无关四个维度
+- [x] "严禁 unsafe 代码"条款存在且说明清楚——主代码库零 unsafe，FFI 通过审核的第三方 crate
+- [x] "Rust 编码标准"包含 edition 2021、clippy -D warnings、rustfmt 强制、错误处理规范、文档要求
+- [x] "错误处理规范"明确 anyhow 用于应用层、thiserror 用于库层、禁用 unwrap/expect（仅测试可用）
+- [x] "模块结构"包含完整 src/ 目录树 + 每个模块职责说明
+- [x] "信任链规格"包含三层模型（根信任 → 开发者信任 → 包信任）+ 90 天公钥轮换过渡期
+- [x] "包格式规格"包含 .hypo ZIP 布局 + manifest.toml schema
+- [x] "Registry 结构规格"包含 registry.json / shard JSON / hypo-index.json / hypo-package.json 四个 schema
+- [x] "GPG 双签机制"包含 .hypo 整体签名 + manifest 签名 + sequoia-openpgp 实现
+- [x] "哈希校验规格"包含 registry.json shard_hashes + manifest 内 per-file SHA256
+- [x] "降级防护规格"包含 latest_seen_version + --force 要求 + 合法降级路径（freeze 机制）
+- [x] "信任模型规格"包含 --from-url 混合模式（GitHub Pages 自动信任 / TOFU 手动确认）
+- [x] "子命令集"覆盖 init/install/uninstall/list/info/registry/config/init-r 全部子命令
+- [x] "退出码规范"包含 0/1/2/10/11/12/13/14/15 全部退出码定义
+- [x] "平台支持"说明 MVP Windows 优先 + trait 抽象跨平台
+- [x] "脚本解释器支持"列出 powershell/bash/zsh/python 四种 + MVP 仅 powershell
+- [x] "SemVer 合规"包含版本格式 + 约束操作符 + prerelease 标签
+- [x] registry.json schema 包含 snapshot_version/shards/key_rotation/shard_hashes/key_update_url 字段
+- [x] manifest.toml schema 包含 [package]/[scripts]/[dependencies]/[sandbox]/[interpreter] 段
+- [x] docs/SPEC.md 中的所有 schema 与 roadmap.md 中的数据结构定义一致
+- [x] docs/SPEC.md 中不出现"仅限 Rust"或类似限制性描述
