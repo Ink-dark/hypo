@@ -56,7 +56,7 @@ impl HypoPackageReader {
         pb.set_style(
             ProgressStyle::default_bar()
                 .template("{msg}\n{wide_bar} {bytes}/{total_bytes} ({bytes_per_sec}) {eta}")
-                .unwrap(),
+                .unwrap_or_else(|_| ProgressStyle::default_bar()),
         );
         pb.set_message(format!("下载 {}", url));
 
