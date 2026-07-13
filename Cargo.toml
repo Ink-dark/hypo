@@ -1,0 +1,55 @@
+[package]
+name = "hypo"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+# Async runtime
+tokio = { version = "1.43", features = ["macros", "rt-multi-thread", "fs"] }
+
+# HTTP client
+reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
+
+# OpenPGP (pure Rust, standard nettle backend)
+sequoia-openpgp = { version = "1.20", default-features = false, features = ["crypto-cng"] }
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+
+# Crypto / hashing
+sha2 = "0.10"
+
+# SemVer
+semver = { version = "1.0", features = ["serde"] }
+
+# ZIP
+zip = "2.2"
+
+# Graph (dependency resolution)
+petgraph = "0.7"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "2.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+indicatif = "0.17"
+
+# System paths
+directories = "5.0"
+
+# Database
+rusqlite = { version = "0.33", features = ["bundled"] }
+
+# User prompts
+dialoguer = "0.11"
+
+[dev-dependencies]
+# (none required at Step 0)

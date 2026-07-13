@@ -1,0 +1,2 @@
+# Placeholder for future clippy configuration
+# All MVP linting is enforced via `cargo clippy -- -D warnings`
