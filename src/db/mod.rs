@@ -1,1 +1,6 @@
-// Placeholder for Step 6 SQLite local database schema and CRUD.
+//! DB 模块：本地 SQLite 数据库。
+//!
+//! 存储已安装包信息（含降级防护字段）与 registry 配置。
+
+pub mod operations;
+pub mod schema;
