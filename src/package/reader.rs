@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::error::HypoError;
 use crate::package::manifest::Manifest;
+use crate::prg_bar::{ProgressBar, ProgressStyle};
 
 /// .hypo 包读取器。
 ///
@@ -49,7 +50,6 @@ impl HypoPackageReader {
         }
 
         let total_size = response.content_length().unwrap_or(0);
-        eprintln!("  下载 {}", url);
 
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)
@@ -58,6 +58,10 @@ impl HypoPackageReader {
 
         let mut file = std::fs::File::create(dest)
             .map_err(|e| HypoError::Network(format!("创建下载文件失败: {e}")))?;
+
+        let style = ProgressStyle::cargo().with_bytes();
+        let pb = ProgressBar::with_style(total_size, style);
+        pb.set_message(&format!("Downloading {}", url));
 
         let mut downloaded: u64 = 0;
         while let Some(chunk) = response
@@ -68,14 +72,9 @@ impl HypoPackageReader {
             file.write_all(&chunk)
                 .map_err(|e| HypoError::Network(format!("写入下载文件失败: {e}")))?;
             downloaded += chunk.len() as u64;
-            if total_size > 0 {
-                let pct = (downloaded * 100).checked_div(total_size).unwrap_or(0);
-                let width = 30;
-                let filled = (pct as usize * width).checked_div(100).unwrap_or(0);
-                eprint!("\r  [{}=>{}] {}%", "=".repeat(filled), " ".repeat(width - filled), pct);
-            }
+            pb.set_position(downloaded);
         }
-        eprintln!("\r  [{}=>] 100%", "=".repeat(30));
+        pb.finish_with_message("✓ Downloaded");
 
         Ok(())
     }
