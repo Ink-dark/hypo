@@ -17,38 +17,38 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Windows MSVC (crypto-cng)
+          # Windows MSVC (cng)
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             binary: hypo.exe
-            sequoia-features: crypto-cng
+            sequoia-features: cng
 
-          # Linux x86_64 (crypto-nettle)
+          # Linux x86_64 (nettle)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             binary: hypo
-            sequoia-features: crypto-nettle
+            sequoia-features: nettle
             apt-deps: libnettle-dev pkg-config
 
           # Linux aarch64 (交叉编译)
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
             binary: hypo
-            sequoia-features: crypto-nettle
+            sequoia-features: nettle
             apt-deps: libnettle-dev pkg-config gcc-aarch64-linux-gnu
 
-          # macOS x86_64 (crypto-nettle)
+          # macOS x86_64 (nettle)
           - os: macos-latest
             target: x86_64-apple-darwin
             binary: hypo
-            sequoia-features: crypto-nettle
+            sequoia-features: nettle
             brew-deps: nettle
 
-          # macOS aarch64 (crypto-nettle)
+          # macOS aarch64 (nettle)
           - os: macos-latest
             target: aarch64-apple-darwin
             binary: hypo
-            sequoia-features: crypto-nettle
+            sequoia-features: nettle
             brew-deps: nettle
 
     steps:

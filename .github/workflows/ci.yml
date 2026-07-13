@@ -24,11 +24,14 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y libnettle-dev pkg-config
+
       - name: Check formatting
         run: cargo fmt --all -- --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets -- -D warnings
+        run: cargo clippy --all-targets --features nettle -- -D warnings
 
   # ── 文档检查 ────────────────────────────────────────
   docs:
@@ -41,8 +44,11 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y libnettle-dev pkg-config
+
       - name: Build docs
-        run: cargo doc --no-deps --document-private-items
+        run: cargo doc --no-deps --document-private-items --features nettle
         env:
           RUSTDOCFLAGS: "-D warnings"
 
@@ -54,24 +60,24 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Windows MSVC (crypto-cng)
+          # Windows MSVC (cng)
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             rust: stable
-            sequoia-features: crypto-cng
+            sequoia-features: cng
 
-          # Linux (crypto-nettle)
+          # Linux (nettle)
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             rust: stable
-            sequoia-features: crypto-nettle
+            sequoia-features: nettle
             apt-deps: libnettle-dev pkg-config
 
-          # macOS (crypto-nettle)
+          # macOS (nettle)
           - os: macos-latest
             target: x86_64-apple-darwin
             rust: stable
-            sequoia-features: crypto-nettle
+            sequoia-features: nettle
             brew-deps: nettle
 
     runs-on: ${{ matrix.os }}
@@ -120,6 +126,9 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y libnettle-dev pkg-config
+
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked
 
@@ -142,5 +151,8 @@ jobs:
 
       - uses: Swatinem/rust-cache@v2
 
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y libnettle-dev pkg-config
+
       - name: Check MSRV
-        run: cargo check --workspace
+        run: cargo check --workspace --features nettle
