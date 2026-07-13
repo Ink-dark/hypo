@@ -237,7 +237,7 @@ fn sign_detached(cert: &sequoia_openpgp::Cert, data: &[u8]) -> Result<Vec<u8>, B
     let mut sig = Vec::new();
     {
         let message = Message::new(&mut sig);
-        let mut message = Signer::new(message, keypair).detached().build()?;
+        let mut message = Signer::new(message, keypair)?.detached().build()?;
         message.write_all(data)?;
         message.finalize()?;
     }

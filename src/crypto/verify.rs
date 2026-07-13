@@ -215,9 +215,10 @@ mod tests {
         {
             let message = Message::new(&mut sink);
             let mut message = Signer::new(message, signing_keypair)
+                .expect("创建 Signer 失败")
                 .detached()
                 .build()
-                .expect("创建 Signer 失败");
+                .expect("构建 Signer 失败");
             use std::io::Write;
             message.write_all(data).expect("写入签名数据失败");
             message.finalize().expect("完成签名失败");

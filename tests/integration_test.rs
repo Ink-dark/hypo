@@ -285,6 +285,7 @@ fn test_crypto_sign_and_verify() {
     {
         let message = Message::new(&mut sig);
         let mut message = Signer::new(message, signing_keypair)
+            .unwrap()
             .detached()
             .build()
             .unwrap();
