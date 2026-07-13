@@ -1,0 +1,8 @@
+{
+  "github_username": "YOUR_GITHUB_USERNAME",
+  "gpg_key_fingerprints": [
+    "A1B2C3D4E5F67890ABCDEF1234567890ABCDEF12"
+  ],
+  "base_pkg_url": "https://YOUR_USERNAME.github.io/hypo-pkgs",
+  "registered_at": "2026-01-01T00:00:00Z"
+}

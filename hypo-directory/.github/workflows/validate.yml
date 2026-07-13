@@ -1,0 +1,82 @@
+name: Validate PR
+
+on:
+  pull_request:
+    paths:
+      - '**/*.json'
+      - '!registry.json'
+
+jobs:
+  validate:
+    name: Validate Developer Registration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find changed shard files
+        id: changes
+        run: |
+          FILES=$(git diff --name-only origin/main...HEAD -- '?.json' '??.json' '?/*.json' '??/*.json')
+          echo "files=$FILES" >> "$GITHUB_OUTPUT"
+          echo "Changed files: $FILES"
+
+      - name: Validate JSON schema
+        run: |
+          for f in ${{ steps.changes.outputs.files }}; do
+            [ -z "$f" ] && continue
+            echo "Validating: $f"
+            # 校验 JSON 格式
+            jq '.' "$f" > /dev/null || { echo "ERROR: $f 不是有效 JSON"; exit 1; }
+            # 校验必填字段
+            jq -e '.github_username' "$f" > /dev/null || { echo "ERROR: 缺少 github_username"; exit 1; }
+            jq -e '.gpg_key_fingerprints' "$f" > /dev/null || { echo "ERROR: 缺少 gpg_key_fingerprints"; exit 1; }
+            jq -e '.base_pkg_url' "$f" > /dev/null || { echo "ERROR: 缺少 base_pkg_url"; exit 1; }
+            jq -e '.registered_at' "$f" > /dev/null || { echo "ERROR: 缺少 registered_at"; exit 1; }
+          done
+
+      - name: Validate fingerprint format
+        run: |
+          for f in ${{ steps.changes.outputs.files }}; do
+            [ -z "$f" ] && continue
+            FINGERPRINTS=$(jq -r '.gpg_key_fingerprints[]' "$f")
+            for fp in $FINGERPRINTS; do
+              if ! echo "$fp" | grep -qE '^[A-Fa-f0-9]{40}$'; then
+                echo "ERROR: 无效的 GPG 指纹格式: $fp (需 40 位十六进制)"
+                exit 1
+              fi
+            done
+          done
+
+      - name: Verify username matches filename
+        run: |
+          for f in ${{ steps.changes.outputs.files }}; do
+            [ -z "$f" ] && continue
+            JSON_USER=$(jq -r '.github_username' "$f")
+            FILE_USER=$(basename "$f" .json)
+            if [ "$JSON_USER" != "$FILE_USER" ]; then
+              echo "ERROR: 文件名与 github_username 不一致"
+              echo "  文件: $f → 期望: $JSON_USER.json, 实际: $FILE_USER.json"
+              exit 1
+            fi
+          done
+
+      - name: Verify single file changed
+        run: |
+          COUNT=$(echo "${{ steps.changes.outputs.files }}" | wc -w)
+          if [ "$COUNT" -gt 1 ]; then
+            echo "ERROR: 每次 PR 只能注册一个开发者，当前修改了 $COUNT 个文件"
+            exit 1
+          fi
+
+      - name: Check base_pkg_url accessibility
+        run: |
+          for f in ${{ steps.changes.outputs.files }}; do
+            [ -z "$f" ] && continue
+            URL=$(jq -r '.base_pkg_url' "$f")
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "$URL/hypo-index.json" || echo "000")
+            if [ "$HTTP_CODE" = "000" ]; then
+              echo "WARNING: 无法访问 $URL，请确保 base_pkg_url 可访问"
+            else
+              echo "$URL → HTTP $HTTP_CODE"
+            fi
+          done

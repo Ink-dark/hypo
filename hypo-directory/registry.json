@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "snapshot_version": 0,
+  "shards": [
+    "a", "b", "c", "d", "e", "f", "g", "h", "i", "j",
+    "k", "l", "m", "n", "o", "p", "q", "r", "s", "t",
+    "u", "v", "w", "x", "y", "z", "0"
+  ],
+  "shard_hashes": {},
+  "official_key_fingerprints": [
+    "PLACEHOLDER_OFFICIAL_KEY_FINGERPRINT_40HEX"
+  ],
+  "key_rotation": {
+    "old_key_fingerprint": "",
+    "old_key_retired_at": "2099-01-01T00:00:00Z",
+    "transition_period_days": 90
+  },
+  "key_update_url": "https://hypo-org.github.io/directory/keys/current.json",
+  "mirrors": []
+}

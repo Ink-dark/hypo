@@ -1,0 +1,4 @@
+registry.sig
+registry.sig.old
+*.asc
+!**/.gitkeep
