@@ -259,7 +259,7 @@ mod tests {
     fn test_check_fingerprint_trusted() {
         let cert = generate_test_cert();
         let fp = cert.fingerprint().to_hex();
-        assert!(check_fingerprint_trusted(&cert, &[fp.clone()]).is_ok());
+        assert!(check_fingerprint_trusted(&cert, std::slice::from_ref(&fp)).is_ok());
         assert!(check_fingerprint_trusted(&cert, &["DEADBEEF".into()]).is_err());
     }
 
