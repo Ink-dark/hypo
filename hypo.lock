@@ -1,0 +1,9 @@
+version = 1
+
+[[packages]]
+owner = "test-owner"
+name = "smoke-test"
+version = "0.1.0"
+url = ""
+sha256 = ""
+source_registry = ""

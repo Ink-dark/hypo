@@ -1,0 +1,26 @@
+{
+  "owner": "test-owner",
+  "packages": [
+    {
+      "description": "Smoke test package",
+      "latest_version": "0.1.0",
+      "name": "smoke-test",
+      "repo": "test-owner/smoke-test",
+      "versions": [
+        {
+          "freeze": false,
+          "freeze_reason": null,
+          "hypo_deps": [],
+          "manifest_path": "smoke-test/0.1.0/manifest.toml",
+          "manifest_sig_path": "smoke-test/0.1.0/manifest.toml.sig",
+          "package_index_path": "smoke-test/0.1.0/hypo-package.json",
+          "released_at": "2026-07-01T00:00:00Z",
+          "rollback_version": null,
+          "system_deps": [],
+          "version": "0.1.0"
+        }
+      ]
+    }
+  ],
+  "schema_version": 1
+}

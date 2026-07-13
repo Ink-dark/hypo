@@ -1,0 +1,17 @@
+{
+  "name": "smoke-test",
+  "packages": [
+    {
+      "arch": [
+        "x86_64"
+      ],
+      "platform": "windows",
+      "sha256": "f2b2b3f492483971bd474413522f9418d55bc916e697ab70c69bedfa579d405c",
+      "sig_url": "http://localhost:8765/packages/smoke-test-0.1.0-windows.hypo.sig",
+      "size": 1115,
+      "url": "http://localhost:8765/packages/smoke-test-0.1.0-windows.hypo"
+    }
+  ],
+  "schema_version": 1,
+  "version": "0.1.0"
+}

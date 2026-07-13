@@ -6,9 +6,7 @@
 
 use reqwest::Client;
 
-use crate::constants::OFFICIAL_DIR_BASE_URL;
 use crate::error::HypoError;
-use crate::registry::cache;
 use crate::registry::types::*;
 
 /// 创建带安全策略的 HTTP 客户端。
@@ -34,28 +32,8 @@ fn http_client() -> Result<Client, HypoError> {
 /// 签名验证由调用方负责（需要加载根证书后调用 [`verify::verify_registry_sig`]）。
 pub async fn fetch_registry_json() -> Result<(RegistryJson, Vec<u8>), HypoError> {
     let client = http_client()?;
-    let url = format!("{OFFICIAL_DIR_BASE_URL}/registry.json");
-
-    let request = client.get(&url);
-    let request = cache::apply_cache_headers(request, &url);
-    let response = request
-        .send()
-        .await
-        .map_err(|e| HypoError::Network(format!("拉取 registry.json 失败: {e}")))?;
-
-    if !response.status().is_success() {
-        return Err(HypoError::Network(format!(
-            "registry.json 返回 HTTP {}",
-            response.status()
-        )));
-    }
-
-    cache::update_cache_from_response(&url, &response);
-
-    let raw_json = response
-        .bytes()
-        .await
-        .map_err(|e| HypoError::Network(format!("读取 registry.json 响应体失败: {e}")))?;
+    let base = crate::constants::official_dir_url();
+    let raw_json = fetch_raw(&client, &format!("{base}/registry.json")).await?;
 
     let registry: RegistryJson = serde_json::from_slice(&raw_json)
         .map_err(|e| HypoError::Network(format!("registry.json 解析失败: {e}")))?;
@@ -66,14 +44,16 @@ pub async fn fetch_registry_json() -> Result<(RegistryJson, Vec<u8>), HypoError>
 /// 拉取 `registry.sig` 签名文件。
 pub async fn fetch_registry_sig() -> Result<Vec<u8>, HypoError> {
     let client = http_client()?;
-    let url = format!("{OFFICIAL_DIR_BASE_URL}/registry.sig");
+    let base = crate::constants::official_dir_url();
+    let url = format!("{base}/registry.sig");
     fetch_raw(&client, &url).await
 }
 
 /// 拉取 `registry.sig.old` 旧密钥签名文件（过渡期）。
 pub async fn fetch_registry_sig_old() -> Result<Vec<u8>, HypoError> {
     let client = http_client()?;
-    let url = format!("{OFFICIAL_DIR_BASE_URL}/registry.sig.old");
+    let base = crate::constants::official_dir_url();
+    let url = format!("{base}/registry.sig.old");
     fetch_raw(&client, &url).await
 }
 
@@ -96,28 +76,8 @@ pub async fn fetch_shard(registry: &RegistryJson, owner: &str) -> Result<ShardJs
         .next()
         .unwrap_or('_');
     let shard_path = format!("{first_char}/{owner}.json");
-    let url = format!("{OFFICIAL_DIR_BASE_URL}/{shard_path}");
-
-    let request = client.get(&url);
-    let request = cache::apply_cache_headers(request, &url);
-    let response = request
-        .send()
-        .await
-        .map_err(|e| HypoError::Network(format!("拉取分片 {shard_path} 失败: {e}")))?;
-
-    if !response.status().is_success() {
-        return Err(HypoError::RegistryNotFound(format!(
-            "开发者 {owner} 的分片不存在（HTTP {}）",
-            response.status()
-        )));
-    }
-
-    cache::update_cache_from_response(&url, &response);
-
-    let raw = response
-        .bytes()
-        .await
-        .map_err(|e| HypoError::Network(format!("读取分片响应体失败: {e}")))?;
+    let base = crate::constants::official_dir_url();
+    let raw = fetch_raw(&client, &format!("{base}/{shard_path}")).await?;
 
     // SHA256 校验
     verify_shard_hash(&raw, &shard_path, registry)?;
@@ -203,9 +163,9 @@ pub async fn fetch_manifest(
 
 /// 执行 GET 请求并返回响应体字节。
 async fn fetch_raw(client: &Client, url: &str) -> Result<Vec<u8>, HypoError> {
-    let request = client.get(url);
-    let request = cache::apply_cache_headers(request, url);
-    let response = request
+    // MVP 阶段跳过条件缓存（避免 304 处理复杂性）
+    let response = client
+        .get(url)
         .send()
         .await
         .map_err(|e| HypoError::Network(format!("请求 {url} 失败: {e}")))?;
@@ -216,8 +176,6 @@ async fn fetch_raw(client: &Client, url: &str) -> Result<Vec<u8>, HypoError> {
             response.status()
         )));
     }
-
-    cache::update_cache_from_response(url, &response);
 
     response
         .bytes()

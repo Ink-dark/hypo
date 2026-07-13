@@ -1,9 +1,13 @@
 //! 硬编码常量：官方目录 URL、公钥指纹集合、默认文件名等。
 //!
 //! 公钥指纹为占位值，后续替换真实指纹。
+//! 官方目录 URL 可通过 `HYPO_REGISTRY_URL` 环境变量覆盖（用于测试）。
 
-/// 官方目录根 URL。
-pub const OFFICIAL_DIR_BASE_URL: &str = "https://hypo-org.github.io/directory";
+/// 官方目录根 URL（可通过 `HYPO_REGISTRY_URL` 环境变量覆盖）。
+pub fn official_dir_url() -> String {
+    std::env::var("HYPO_REGISTRY_URL")
+        .unwrap_or_else(|_| "https://hypo-org.github.io/directory".to_string())
+}
 
 /// 官方签名公钥指纹集合（占位值，后续替换真实指纹）。
 pub const OFFICIAL_KEY_FINGERPRINTS: &[&str] = &["PLACEHOLDER_FINGERPRINT_1"];

@@ -40,6 +40,9 @@ enum Commands {
         /// 强制执行（跳过降级/冻结保护）
         #[arg(short, long)]
         force: bool,
+        /// 跳过安装确认
+        #[arg(short = 'y', long)]
+        yes: bool,
         /// 从自定义 URL 安装
         #[arg(long)]
         from_url: Option<String>,
@@ -103,8 +106,9 @@ async fn main() {
         Commands::Install {
             package,
             force,
+            yes,
             from_url,
-        } => hypo::commands::install::run(&package, force, from_url.as_deref()).await,
+        } => hypo::commands::install::run(&package, force, yes, from_url.as_deref()).await,
         Commands::Uninstall { package } => hypo::commands::uninstall::run(&package).await,
         Commands::List => hypo::commands::list::run().await,
         Commands::Info { package } => hypo::commands::info::run(&package).await,

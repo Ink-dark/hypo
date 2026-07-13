@@ -10,16 +10,21 @@ use crate::executor::executor_trait::ScriptExecutor;
 use crate::paths;
 
 /// 执行 hypo install。
-pub async fn run(package: &str, force: bool, from_url: Option<&str>) -> Result<(), HypoError> {
+pub async fn run(
+    package: &str,
+    force: bool,
+    yes: bool,
+    from_url: Option<&str>,
+) -> Result<(), HypoError> {
     if let Some(url) = from_url {
         install_from_url(url, force).await
     } else {
-        install_from_registry(package, force).await
+        install_from_registry(package, force, yes).await
     }
 }
 
 /// 从官方目录安装。
-async fn install_from_registry(package: &str, force: bool) -> Result<(), HypoError> {
+async fn install_from_registry(package: &str, force: bool, yes: bool) -> Result<(), HypoError> {
     // 1. 解析包名
     let dep = crate::deps::resolver::parse_dep_string(package)?;
     let (owner, name, version_constraint) = (&dep.owner, &dep.name, &dep.constraint_str);
@@ -131,6 +136,8 @@ async fn install_from_registry(package: &str, force: bool) -> Result<(), HypoErr
         local_manifest.sandbox.allowed_write_paths
     ));
 
+    let mut executor = executor;
+    executor.skip_confirm = yes;
     executor.execute(&script_path, HashMap::new()).await?;
 
     // 21. 写入本地数据库

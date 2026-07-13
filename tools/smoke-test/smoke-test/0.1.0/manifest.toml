@@ -1,0 +1,25 @@
+[package]
+name = "smoke-test"
+version = "0.1.0"
+description = "hypo smoke test package"
+author = "test-owner"
+repo = "test-owner/smoke-test"
+platform = "windows"
+arch = ["x86_64"]
+
+[scripts]
+install = "tools/install.ps1"
+
+[interpreter]
+type = "powershell"
+
+[sandbox]
+allowed_write_paths = ["$env:LOCALAPPDATA/smoke-test", "$env:USERPROFILE/.hypo/apps"]
+allowed_network_egress = []
+
+[dependencies]
+hypo = []
+system = []
+
+[hashes]
+"tools/install.ps1" = "22f8e29c4cf171f92f458dc2cfba61453f107388b0849986498d89d6daea9880"

@@ -1,0 +1,20 @@
+{
+  "key_rotation": {
+    "old_key_fingerprint": "",
+    "old_key_retired_at": "2099-01-01T00:00:00Z",
+    "transition_period_days": 90
+  },
+  "key_update_url": "http://localhost:8765/keys/current.json",
+  "mirrors": [],
+  "official_key_fingerprints": [
+    "02EF4CA98DF02023FF85A88C781EBF90096F143D"
+  ],
+  "schema_version": 1,
+  "shard_hashes": {
+    "t/test-owner.json": "sha256:465afcebd00b53d58f34fc65af5d3fa4b2e4ee185e702e9ddfe16220e7fd473b"
+  },
+  "shards": [
+    "t"
+  ],
+  "snapshot_version": 1
+}
