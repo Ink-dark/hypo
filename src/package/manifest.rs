@@ -157,6 +157,45 @@ impl Manifest {
         }
         Ok(())
     }
+
+    /// 从 TOML 字符串解析 Manifest。
+    ///
+    /// 内部调用 `toml::from_str`，将解析错误转换为 `HypoError`。
+    pub fn parse(toml_str: &str) -> Result<Self, crate::error::HypoError> {
+        toml::from_str(toml_str)
+            .map_err(|e| crate::error::HypoError::Config(format!("manifest.toml 解析失败: {e}")))
+    }
+
+    /// 对比包内 manifest 与 gh-pages 上的 manifest 是否一致。
+    ///
+    /// 比较 [package] 段的 name / version / author / repo 字段，
+    /// 以及 [hashes] 段是否完全相同。
+    /// 任一不一致返回错误。
+    pub fn compare_consistency(&self, remote: &Self) -> Result<(), crate::error::HypoError> {
+        macro_rules! check {
+            ($field:ident, $label:expr) => {
+                if self.package.$field != remote.package.$field {
+                    return Err(crate::error::HypoError::Config(format!(
+                        "manifest 不一致：{} 不匹配（包内: {}, gh-pages: {}）",
+                        $label, self.package.$field, remote.package.$field,
+                    )));
+                }
+            };
+        }
+
+        check!(name, "包名");
+        check!(version, "版本号");
+        check!(author, "作者");
+        check!(repo, "仓库");
+
+        if self.hashes != remote.hashes {
+            return Err(crate::error::HypoError::Config(
+                "manifest 不一致：[hashes] 表不匹配".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
