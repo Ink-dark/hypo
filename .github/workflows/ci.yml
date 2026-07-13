@@ -69,4 +69,8 @@ jobs:
       - name: Verify no unsafe
         shell: bash
         run: |
-          ! grep -r "unsafe" src/ --include="*.rs" || (echo "ERROR: unsafe code found" && exit 1)
+          if grep -r "unsafe" src/ --include="*.rs" | grep -qv "forbid(unsafe_code)"; then
+            echo "ERROR: unsafe code found"
+            grep -rn "unsafe" src/ --include="*.rs" | grep -v "forbid(unsafe_code)"
+            exit 1
+          fi
