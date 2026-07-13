@@ -1,0 +1,184 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  # ── 构建全部平台二进制 ──────────────────────────────
+  build:
+    name: Build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Windows MSVC (crypto-cng)
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary: hypo.exe
+            sequoia-features: crypto-cng
+
+          # Linux x86_64 (crypto-nettle)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            binary: hypo
+            sequoia-features: crypto-nettle
+            apt-deps: libnettle-dev pkg-config
+
+          # Linux aarch64 (交叉编译)
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            binary: hypo
+            sequoia-features: crypto-nettle
+            apt-deps: libnettle-dev pkg-config gcc-aarch64-linux-gnu
+
+          # macOS x86_64 (crypto-nettle)
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            binary: hypo
+            sequoia-features: crypto-nettle
+            brew-deps: nettle
+
+          # macOS aarch64 (crypto-nettle)
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            binary: hypo
+            sequoia-features: crypto-nettle
+            brew-deps: nettle
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install Linux deps
+        if: matrix.apt-deps != ''
+        run: sudo apt-get update && sudo apt-get install -y ${{ matrix.apt-deps }}
+
+      - name: Install macOS deps
+        if: matrix.brew-deps != ''
+        run: brew install ${{ matrix.brew-deps }}
+
+      - name: Build release
+        run: cargo build --release --target ${{ matrix.target }} --features ${{ matrix.sequoia-features }}
+        env:
+          CARGO_BUILD_TARGET: ${{ matrix.target }}
+
+      # 产物命名基于 tag 和 target
+      - name: Set artifact name
+        id: artifact
+        shell: bash
+        run: |
+          TAG="${{ github.ref_name }}"
+          TARGET="${{ matrix.target }}"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            echo "name=hypo-${TAG}-${TARGET}.exe" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=hypo-${TAG}-${TARGET}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Prepare artifact
+        shell: bash
+        run: |
+          cp target/${{ matrix.target }}/release/${{ matrix.binary }} "${{ steps.artifact.outputs.name }}"
+
+      - name: Package (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          chmod +x "${{ steps.artifact.outputs.name }}"
+          tar czf "${{ steps.artifact.outputs.name }}.tar.gz" "${{ steps.artifact.outputs.name }}"
+
+      - name: Generate SHA256
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            sha256sum "${{ steps.artifact.outputs.name }}" > "${{ steps.artifact.outputs.name }}.sha256"
+          else
+            sha256sum "${{ steps.artifact.outputs.name }}.tar.gz" > "${{ steps.artifact.outputs.name }}.tar.gz.sha256"
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.target }}
+          path: |
+            ${{ steps.artifact.outputs.name }}
+            ${{ steps.artifact.outputs.name }}.tar.gz
+            *.sha256
+          if-no-files-found: error
+
+  # ── 创建 GitHub Release ─────────────────────────────
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$PREV_TAG" ]; then
+            echo "body=**Initial release**" >> "$GITHUB_OUTPUT"
+          else
+            CHANGES=$(git log --oneline --no-merges "${PREV_TAG}..HEAD" | sed 's/^/- /')
+            {
+              echo "body<<EOF"
+              echo "$CHANGES"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: List artifacts
+        run: ls -la artifacts/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: hypo ${{ github.ref_name }}
+          body: ${{ steps.changelog.outputs.body }}
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          files: artifacts/**
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+
+  # ── 验证安装 ────────────────────────────────────────
+  smoke-test:
+    name: Smoke Test (Linux)
+    runs-on: ubuntu-latest
+    needs: [release]
+    steps:
+      - name: Download Linux binary
+        run: |
+          curl -fsSL \
+            "https://github.com/${{ github.repository }}/releases/download/${{ github.ref_name }}/hypo-${{ github.ref_name }}-x86_64-unknown-linux-gnu.tar.gz" \
+            -o hypo.tar.gz
+          tar xzf hypo.tar.gz
+          chmod +x hypo-*
+
+      - name: Verify binary
+        run: |
+          ./hypo-* --version
+          ./hypo-* --help

@@ -13,8 +13,8 @@ tokio = { version = "1.43", features = ["macros", "rt-multi-thread", "fs", "proc
 # HTTP client
 reqwest = { version = "0.12", features = ["json", "rustls-tls"] }
 
-# OpenPGP (pure Rust, standard nettle backend)
-sequoia-openpgp = { version = "1.20", default-features = false, features = ["crypto-cng"] }
+# OpenPGP (pure Rust, 平台选择 crypto 后端，通过 features 切换)
+sequoia-openpgp = { version = "1.20", default-features = false }
 
 # Serialization
 serde = { version = "1.0", features = ["derive"] }
@@ -53,6 +53,13 @@ dialoguer = "0.11"
 
 # URL parsing
 url = "2.5"
+
+[features]
+default = []
+# Windows — 使用 CNG 后端（零外部依赖）
+cng = ["sequoia-openpgp/crypto-cng"]
+# Linux/macOS — 使用 Nettle 后端（需系统安装 libnettle）
+nettle = ["sequoia-openpgp/crypto-nettle"]
 
 [dev-dependencies]
 # (none required at Step 0)
