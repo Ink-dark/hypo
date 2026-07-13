@@ -21,26 +21,20 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Build release
-        run: cargo build --release --features cng --verbose
+        run: cargo build --release --features cng --verbose --target-dir target
 
       - name: Set artifact name
         id: artifact
         shell: bash
         run: echo "name=hypo-${{ github.ref_name }}-x86_64-windows.exe" >> "$GITHUB_OUTPUT"
 
-      - name: Debug build output
-        shell: bash
-        run: find target/release -name 'hypo*' -type f 2>/dev/null || ls -la target/release/hypo* 2>/dev/null || echo "No binary found"
-
-      - name: Prepare artifact
-        shell: bash
+      - name: Locate binary
+        shell: pwsh
         run: |
-          BIN=$(find target/release -name 'hypo*' -type f -not -name '*.d' -not -name '*.pdb' | head -1)
-          if [ -z "$BIN" ]; then
-            echo "ERROR: binary not found"
-            exit 1
-          fi
-          cp "$BIN" "${{ steps.artifact.outputs.name }}"
+          $bin = Get-ChildItem -Recurse target -Filter 'hypo.exe' | Where-Object { $_.FullName -match 'release' } | Select-Object -First 1
+          if (-not $bin) { Write-Error "binary not found in target/**/release/"; exit 1 }
+          Write-Host "Found: $($bin.FullName)"
+          Copy-Item $bin.FullName "${{ steps.artifact.outputs.name }}"
 
       - name: Generate SHA256
         shell: bash
