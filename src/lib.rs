@@ -23,10 +23,10 @@ pub mod error;
 pub mod executor;
 /// .hypo 包处理（解包、manifest、哈希校验）模块。
 pub mod package;
-// 终端进度条工具（零依赖）。
-mod prg_bar;
 /// `~/.hypo/` 目录结构管理模块。
 pub mod paths;
+// 终端进度条工具（零依赖）。
+mod prg_bar;
 /// 两层 Registry 拉取与缓存模块。
 pub mod registry;
 /// 沙箱隔离模块（MVP 空实现）。

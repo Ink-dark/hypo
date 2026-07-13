@@ -389,7 +389,11 @@ impl ProgressBar {
 
     fn render_bar(&self, st: &ProgressState) -> String {
         let w = self.style.bar_width;
-        let pct = if st.len == 0 { 0.0 } else { st.pos as f64 / st.len as f64 };
+        let pct = if st.len == 0 {
+            0.0
+        } else {
+            st.pos as f64 / st.len as f64
+        };
         let filled = ((pct * w as f64) as usize).min(w);
 
         let mut bar = String::with_capacity(w + 4);
