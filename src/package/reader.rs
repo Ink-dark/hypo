@@ -170,8 +170,8 @@ impl HypoPackageReader {
 mod tests {
     use super::*;
 
-    fn create_test_hypo() -> PathBuf {
-        let dir = std::env::temp_dir().join("hypo-test-pkg");
+    fn create_test_hypo(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("hypo-test-{name}"));
         std::fs::create_dir_all(&dir).unwrap();
 
         let manifest_content = r#"
@@ -211,10 +211,10 @@ allowed_network_egress = []
 
     #[test]
     fn test_extract_and_read_manifest() {
-        let hypo_path = create_test_hypo();
+        let hypo_path = create_test_hypo("extract");
         let reader = HypoPackageReader::new(hypo_path.clone());
 
-        let extract_dir = std::env::temp_dir().join("hypo-test-extract");
+        let extract_dir = std::env::temp_dir().join("hypo-test-extract2");
         std::fs::create_dir_all(&extract_dir).unwrap();
 
         reader.extract_to(&extract_dir).expect("解包失败");
@@ -229,7 +229,7 @@ allowed_network_egress = []
 
     #[test]
     fn test_list_files() {
-        let hypo_path = create_test_hypo();
+        let hypo_path = create_test_hypo("list");
         let reader = HypoPackageReader::new(hypo_path.clone());
         let files = reader.list_files().expect("列出文件失败");
         assert!(files.contains(&"manifest.toml".to_string()));
