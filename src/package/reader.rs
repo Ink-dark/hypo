@@ -6,8 +6,6 @@
 use std::io::Write as _;
 use std::path::{Path, PathBuf};
 
-use indicatif::{ProgressBar, ProgressStyle};
-
 use crate::error::HypoError;
 use crate::package::manifest::Manifest;
 
@@ -26,9 +24,9 @@ impl HypoPackageReader {
         Self { file_path }
     }
 
-    /// 下载 .hypo 文件到目标路径，带进度条。
+    /// 下载 .hypo 文件到目标路径，带简易进度指示。
     ///
-    /// 使用 `reqwest` 流式下载 + `indicatif` 进度条。
+    /// 使用 `reqwest` 流式下载。
     pub async fn download(url: &str, dest: &Path) -> Result<(), HypoError> {
         let client = reqwest::Client::builder()
             .user_agent(format!("hypo/{}", env!("CARGO_PKG_VERSION")))
@@ -51,14 +49,7 @@ impl HypoPackageReader {
         }
 
         let total_size = response.content_length().unwrap_or(0);
-
-        let pb = ProgressBar::new(total_size);
-        pb.set_style(
-            ProgressStyle::default_bar()
-                .template("{msg}\n{wide_bar} {bytes}/{total_bytes} ({bytes_per_sec}) {eta}")
-                .unwrap_or_else(|_| ProgressStyle::default_bar()),
-        );
-        pb.set_message(format!("下载 {}", url));
+        eprintln!("  下载 {}", url);
 
         if let Some(parent) = dest.parent() {
             std::fs::create_dir_all(parent)
@@ -77,10 +68,14 @@ impl HypoPackageReader {
             file.write_all(&chunk)
                 .map_err(|e| HypoError::Network(format!("写入下载文件失败: {e}")))?;
             downloaded += chunk.len() as u64;
-            pb.set_position(downloaded);
+            if total_size > 0 {
+                let pct = (downloaded * 100).checked_div(total_size).unwrap_or(0);
+                let width = 30;
+                let filled = (pct as usize * width).checked_div(100).unwrap_or(0);
+                eprint!("\r  [{}=>{}] {}%", "=".repeat(filled), " ".repeat(width - filled), pct);
+            }
         }
-
-        pb.finish_with_message("下载完成");
+        eprintln!("\r  [{}=>] 100%", "=".repeat(30));
 
         Ok(())
     }

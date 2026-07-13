@@ -40,8 +40,6 @@ thiserror = "2.0"
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-indicatif = "0.17"
-
 # System paths
 directories = "5.0"
 
