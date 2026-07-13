@@ -11,11 +11,17 @@ use crate::error::HypoError;
 use crate::registry::cache;
 use crate::registry::types::*;
 
-/// 创建带 User-Agent 的 HTTP 客户端。
+/// 创建带安全策略的 HTTP 客户端。
+///
+/// - User-Agent：`hypo/{version}`
+/// - 超时：30 秒
+/// - 重定向：最多 3 次（防止无限重定向攻击）
+/// - TLS：rustls 默认验证
 fn http_client() -> Result<Client, HypoError> {
     Client::builder()
         .user_agent(format!("hypo/{}", env!("CARGO_PKG_VERSION")))
         .timeout(std::time::Duration::from_secs(30))
+        .redirect(reqwest::redirect::Policy::limited(3))
         .build()
         .map_err(|e| HypoError::Network(format!("创建 HTTP 客户端失败: {e}")))
 }
@@ -76,6 +82,9 @@ pub async fn fetch_registry_sig_old() -> Result<Vec<u8>, HypoError> {
 /// 从 `registry.json` 的 `shard_hashes` 中获取期望的 SHA256，
 /// 拉取后计算实际 SHA256 对比，不匹配返回 [`HypoError::HashMismatch`]（退出码 11）。
 pub async fn fetch_shard(registry: &RegistryJson, owner: &str) -> Result<ShardJson, HypoError> {
+    // 安全校验：owner 必须符合 GitHub username 规范
+    crate::registry::trust::validate_owner(owner)?;
+
     let client = http_client()?;
 
     // 按首字母定位分片：a/alice.json
@@ -127,16 +136,20 @@ fn verify_shard_hash(
 ) -> Result<(), HypoError> {
     use sha2::{Digest, Sha256};
 
-    if let Some(expected) = registry.shard_hashes.get(shard_path) {
-        let actual = format!("{:x}", Sha256::digest(raw));
-        // expected 格式为 "sha256:abc123..."
-        let expected_hash = expected.strip_prefix("sha256:").unwrap_or(expected);
+    let expected = registry.shard_hashes.get(shard_path).ok_or_else(|| {
+        HypoError::HashMismatch(format!(
+            "分片 {shard_path} 的 SHA256 哈希未在 registry.json 中登记，拒绝信任"
+        ))
+    })?;
 
-        if !actual.eq_ignore_ascii_case(expected_hash) {
-            return Err(HypoError::HashMismatch(format!(
-                "分片 {shard_path} SHA256 不匹配：期望 {expected_hash}，实际 {actual}"
-            )));
-        }
+    let actual = format!("{:x}", Sha256::digest(raw));
+    // expected 格式为 "sha256:abc123..."，支持两种格式
+    let expected_hash = expected.strip_prefix("sha256:").unwrap_or(expected);
+
+    if !actual.eq_ignore_ascii_case(expected_hash) {
+        return Err(HypoError::HashMismatch(format!(
+            "分片 {shard_path} SHA256 不匹配：期望 {expected_hash}，实际 {actual}"
+        )));
     }
 
     Ok(())
@@ -218,8 +231,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_verify_shard_hash_missing_key() {
-        // 如果没有期望哈希，则跳过校验
+    fn test_verify_shard_hash_missing_key_rejected() {
+        // 哈希表中无对应条目 → 应返回错误
         let registry = RegistryJson {
             schema_version: 1,
             snapshot_version: 1,
@@ -234,7 +247,8 @@ mod tests {
             key_update_url: "".into(),
             mirrors: vec![],
         };
-        assert!(verify_shard_hash(b"dummy", "a/alice.json", &registry).is_ok());
+        let result = verify_shard_hash(b"dummy", "a/alice.json", &registry);
+        assert!(result.is_err(), "缺失哈希条目应返回错误");
     }
 
     #[test]

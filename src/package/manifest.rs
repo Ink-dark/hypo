@@ -144,12 +144,16 @@ impl Manifest {
     /// - install 脚本必填
     /// - sandbox 段必须存在
     /// - hashes 段必须非空
-    pub fn validate(&self) -> Result<(), String> {
+    pub fn validate(&self) -> Result<(), crate::error::HypoError> {
         if self.scripts.install.is_empty() {
-            return Err("install 脚本路径为必填项".to_string());
+            return Err(crate::error::HypoError::Config(
+                "install 脚本路径为必填项".to_string(),
+            ));
         }
         if self.hashes.is_empty() {
-            return Err("[hashes] 段为空，必须包含包内所有文件的 SHA256".to_string());
+            return Err(crate::error::HypoError::Config(
+                "[hashes] 段为空，必须包含包内所有文件的 SHA256".to_string(),
+            ));
         }
         Ok(())
     }

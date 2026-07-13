@@ -9,30 +9,67 @@ use crate::crypto::keyring;
 use crate::error::HypoError;
 use crate::registry::types::ShardJson;
 
-/// 判断 URL 是否为 GitHub Pages 域名。
-pub fn is_github_pages_url(url: &str) -> bool {
-    // 提取域名部分，检查是否以 .github.io 结尾或等于 github.io
-    let host = url
-        .trim_start_matches("https://")
-        .trim_start_matches("http://")
-        .split('/')
-        .next()
-        .unwrap_or("");
+/// 从 URL 字符串中提取主机名（host），同时拒绝含 userinfo 的 URL。
+///
+/// 使用 `url::Url` 进行标准化解析。
+/// 若 URL 包含 userinfo（`user@host`）则返回 `None`，防止钓鱼攻击。
+fn extract_host(raw_url: &str) -> Option<String> {
+    use std::str::FromStr;
+    let url_str = if raw_url.contains("://") {
+        raw_url.to_string()
+    } else {
+        format!("https://{raw_url}")
+    };
+    let parsed = url::Url::from_str(&url_str).ok()?;
+    // 拒绝含 userinfo 的 URL（如 evil.com@alice.github.io）
+    if parsed.username() != "" || parsed.password().is_some() {
+        return None;
+    }
+    parsed.host_str().map(|h| h.to_lowercase())
+}
+
+/// 检查域名是否为 GitHub Pages 域。
+fn is_github_pages_host(host: &str) -> bool {
     host == "github.io" || host.ends_with(".github.io")
+}
+
+/// 判断 URL 是否为 GitHub Pages 域名。
+///
+/// 使用标准 URL 解析器提取主机名后再判断，防止 `evil.com@alice.github.io`
+/// 类型的 userinfo 注入攻击。
+pub fn is_github_pages_url(url: &str) -> bool {
+    extract_host(url).is_some_and(|h| is_github_pages_host(&h))
 }
 
 /// 从 GitHub Pages URL 中提取 GitHub username。
 ///
 /// 例如 `https://alice.github.io/hypo-pkgs` → `alice`
 pub fn extract_github_username(url: &str) -> Option<String> {
-    // 匹配 *.github.io 子域名
-    if !is_github_pages_url(url) {
+    let host = extract_host(url)?;
+    if !is_github_pages_host(&host) {
         return None;
     }
-    let url = url
-        .trim_start_matches("https://")
-        .trim_start_matches("http://");
-    url.split(".github.io").next().map(|s| s.to_string())
+    // 从 host 中提取子域名部分：alice.github.io → alice
+    host.strip_suffix(".github.io")
+        .filter(|s| !s.is_empty() && s != &"github.io")
+        .map(|s| s.to_string())
+}
+
+/// 验证 owner 名符合 GitHub username 规范。
+///
+/// 规则：仅字母数字与连字符，长度 1-39。
+pub fn validate_owner(owner: &str) -> Result<(), HypoError> {
+    if owner.is_empty() || owner.len() > 39 {
+        return Err(HypoError::RegistryNotFound(format!(
+            "无效的 owner 名称：{owner}"
+        )));
+    }
+    if !owner.chars().all(|c| c.is_ascii_alphanumeric() || c == '-') {
+        return Err(HypoError::RegistryNotFound(format!(
+            "owner 名称包含非法字符：{owner}"
+        )));
+    }
+    Ok(())
 }
 
 /// 对非 GitHub Pages URL 建立 TOFU 信任。
@@ -85,7 +122,10 @@ mod tests {
         assert!(is_github_pages_url("https://alice.github.io/hypo-pkgs"));
         assert!(is_github_pages_url("http://bob.github.io"));
         assert!(!is_github_pages_url("https://example.com/hypo"));
-        assert!(!is_github_pages_url("https://github.io.evil.com"));
+        // userinfo 注入攻击应被拒绝
+        assert!(!is_github_pages_url(
+            "https://evil.com@alice.github.io/hypo-pkgs"
+        ));
     }
 
     #[test]
@@ -99,5 +139,19 @@ mod tests {
             Some("my-org".into())
         );
         assert_eq!(extract_github_username("https://example.com"), None);
+        // userinfo 注入攻击
+        assert_eq!(
+            extract_github_username("https://evil.com@alice.github.io"),
+            None
+        );
+    }
+
+    #[test]
+    fn test_validate_owner() {
+        assert!(validate_owner("alice").is_ok());
+        assert!(validate_owner("my-org").is_ok());
+        assert!(validate_owner("test_user").is_err()); // 下划线
+        assert!(validate_owner("../evil").is_err()); // 路径穿越
+        assert!(validate_owner("").is_err());
     }
 }
