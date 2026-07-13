@@ -58,8 +58,6 @@ url = "2.5"
 default = []
 # Windows — 使用 CNG 后端（零外部依赖）
 cng = ["sequoia-openpgp/crypto-cng"]
-# Linux/macOS — 使用 Nettle 后端（需系统安装 libnettle）
-nettle = ["sequoia-openpgp/crypto-nettle"]
 
 [dev-dependencies]
 # (none required at Step 0)
